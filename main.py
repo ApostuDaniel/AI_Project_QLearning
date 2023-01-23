@@ -19,7 +19,7 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
     env = IrisGym(dataset=(variables_train, target_train))
     lr = 0.001
     n_games = 1500
-    agent = Agent(gamma=0.01, epsilon=1.0, lr=lr,
+    agent = Agent(gamma=0.01, epsilon=0.1, lr=lr,
                   input_dims=env.observation_space.shape,
                   n_actions=3, mem_size=100000, batch_size=1,
                   epsilon_end=0.01)
@@ -33,7 +33,6 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
         while not done:
             action = agent.choose_action(observation)
             observation_, reward, done, _ = env.step(action)
-            done = done
             score += reward
             agent.store_transition(observation, action, reward, observation_, done)
             observation = observation_
@@ -84,10 +83,10 @@ if __name__ == '__main__':
     y = all_data[target].values
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
     #pentru reinforcement learning decomentati linia asta
     reinforcement_learning(X_train, y_train, X_test, y_test)
 
     # pentru learning cu reteaua neuronala decomentatie urmatoarele linii
-    # y_train = to_categorical(y_train)
-    # y_test = to_categorical(y_test)
     # supervized_learning(X_train, y_train, X_test, y_test)

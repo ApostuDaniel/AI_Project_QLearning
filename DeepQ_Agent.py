@@ -7,7 +7,7 @@ from keras.models import load_model
 
 
 class ReplayBuffer():
-    def __init__(self, max_size, input_dims):
+    def __init__(self, max_size, input_dims, actions_dims):
         self.mem_size = max_size
         self.mem_cntr = 0
 
@@ -15,7 +15,7 @@ class ReplayBuffer():
                                      dtype=np.float32)
         self.new_state_memory = np.zeros((self.mem_size, *input_dims),
                                          dtype=np.float32)
-        self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
+        self.action_memory = np.zeros((self.mem_size, *actions_dims), dtype=np.int32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.terminal_memory = np.zeros(self.mem_size, dtype=np.int32)
 
@@ -45,8 +45,8 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
     model = keras.Sequential([
         keras.layers.Dense(fc1_dims, activation='relu'),
         keras.layers.Dense(fc2_dims, activation='relu'),
-        keras.layers.Dense(n_actions, activation=None)])
-    model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
+        keras.layers.Dense(n_actions, activation='softmax')])
+    model.compile(optimizer="adam", loss='mean_squared_error')
 
     return model
 
@@ -56,13 +56,14 @@ class Agent():
                  input_dims, epsilon_dec=1e-3, epsilon_end=0.01,
                  mem_size=150, fname='dqn_model.h5'):
         self.action_space = [i for i in range(n_actions)]
+        self.n_actions = n_actions
         self.gamma = gamma
         self.epsilon = epsilon
         self.eps_dec = epsilon_dec
         self.eps_min = epsilon_end
         self.batch_size = batch_size
         self.model_file = fname
-        self.memory = ReplayBuffer(mem_size, input_dims)
+        self.memory = ReplayBuffer(mem_size, input_dims, (n_actions, ))
         self.q_eval = build_dqn(lr, n_actions, input_dims, 50, 40)
 
     def store_transition(self, state, action, reward, new_state, done):
@@ -71,11 +72,12 @@ class Agent():
     def choose_action(self, observation):
         if np.random.random() < self.epsilon:
             action = np.random.choice(self.action_space)
+            action = np.asarray([1 if action == i else 0 for i in range(self.n_actions)])
         else:
             state = np.array([observation])
             actions = self.q_eval.predict(state)
-
             action = np.argmax(actions)
+            action = np.asarray([1 if action == i else 0 for i in range(self.n_actions)])
 
         return action
 
