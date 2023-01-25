@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 
 from matplotlib import pyplot as plt
 
-def reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, network_weights=None):
+def reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, network_weights=None, show_plot=False, return_accuracy=False):
     env = IrisGym(dataset=(variables_train, target_train), images_per_episode=len(variables_train))
     lr = 0.001
     n_games = episodes
@@ -45,7 +45,7 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
             agent.store_transition(observation, action, reward, observation_, done)
             observation = observation_
             agent.learn()
-        accuracy
+
         eps_history.append(agent.epsilon)
         scores.append(score)
 
@@ -54,18 +54,21 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
               'average_score %.2f' % avg_score,
               'epsilon %.2f' % agent.epsilon)
 
-    if show_evolution:
-        pass
-    if show_boxplot:
-        pass
+    if show_plot:
+        plt.plot([score / len(variables_train) for score in scores])
+        plt.legend(['accuracy'], loc='upper left')
+        plt.title('Reinforcement learning accuracy')
+        plt.show()
+    if return_accuracy:
+        return agent.q_eval, [score / len(variables_train) for score in scores]
 
-    return agent.q_eval
+    return agent.q_eval, None
     # filename = 'lunarlander_tf2.png'
     # x = [i + 1 for i in range(n_games)]
     # plotLearning(x, scores, eps_history, filename)
 
 
-def supervized_learning(variables_train, target_train, variables_test, target_test, epochs, network_weights=None, show_boxplot=False, show_evolution=True):
+def supervized_learning(variables_train, target_train, variables_test, target_test, epochs, network_weights=None, show_plot=False, return_accuracy=False):
     model = Sequential([
         Dense(50, activation='relu', input_dim=4),
         Dense(40, activation='relu'),
@@ -90,33 +93,52 @@ def supervized_learning(variables_train, target_train, variables_test, target_te
     scores2 = model.evaluate(variables_test, target_test, verbose=0)
     print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))
 
-    if show_boxplot:
-        plt.boxplot([history.history['accuracy'], history.history['loss']], labels=['accuracy', 'loss'])
-        plt.title('Supervized learning boxplot')
-        plt.show()
-    if show_evolution:
+    if show_plot:
         plt.plot(history.history['accuracy'])
         plt.plot(history.history['loss'])
         plt.legend(['accuracy', 'loss'], loc='upper left')
-        plt.title('Supervized learning evolution')
+        plt.title('Supervized learning accuracy')
         plt.show()
-    return model
+    if return_accuracy:
+        return model, history.history['accuracy']
+
+    return model, None
 
 
-def supervized_to_RL(variables_train, target_train, variables_test, target_test, epochs, episodes, show_boxplot=False):
+def supervized_to_RL(variables_train, target_train, variables_test, target_test, epochs, episodes, show_plot=False):
     y_train = to_categorical(target_train)
     y_test = to_categorical(target_test)
+    if show_plot:
+        trained_network, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs, return_accuracy=True)
+        rl_model, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, trained_network.get_weights(), return_accuracy=True)
+        accuracy = accuracy_nn + accuracy_rl
+        plt.plot(accuracy)
+        plt.legend(['accuracy'], loc='upper left')
+        plt.title('Supervized to reinforcement learning accuracy')
+        plt.show()
+        return rl_model, accuracy
     trained_network = supervized_learning(variables_train, y_train, variables_test, y_test, epochs)
-    reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes,
-                           trained_network.get_weights())
+    rl_model = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes,
+                                        trained_network.get_weights())
+    return rl_model, None
 
 
-def RL_to_supervized(variables_train, target_train, variables_test, target_test, epochs, episodes, show_boxplot=False):
+def RL_to_supervized(variables_train, target_train, variables_test, target_test, epochs, episodes, show_plot=False):
     y_train = to_categorical(target_train)
     y_test = to_categorical(target_test)
+    if show_plot:
+        trained_network, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, None, return_accuracy=True)
+        supervized_model, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs, trained_network.get_weights(), return_accuracy=True)
+        accuracy = accuracy_rl + accuracy_nn
+        plt.plot(accuracy)
+        plt.legend(['accuracy'], loc='upper left')
+        plt.title('Reinforcement to supervized learning accuracy')
+        plt.show()
+        return supervized_model, accuracy
     trained_network = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, None)
     supervized_model = supervized_learning(variables_train, y_train, variables_test, y_test, epochs,
                                            trained_network.get_weights())
+    return supervized_model, None
 
 
 if __name__ == '__main__':
@@ -129,13 +151,15 @@ if __name__ == '__main__':
     y = all_data[target].values
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
-    # supervized_to_RL(X_train, y_train, X_test, y_test, 50, 10)
-    RL_to_supervized(X_train, y_train, X_test, y_test, 50, 10)
+    _, acc_NN_RL = supervized_to_RL(X_train, y_train, X_test, y_test, 50, 10, show_plot=True)
+    _, acc_RL_NN = RL_to_supervized(X_train, y_train, X_test, y_test, 50, 10, show_plot=True)
 
     # pentru reinforcement learning decomentati linia asta
-    #reinforcement_learning(X_train, y_train, X_test, y_test, 30)
+    _, acc_RL = reinforcement_learning(X_train, y_train, X_test, y_test, 30, None, show_plot=True, return_accuracy=True)
 
     # pentru learning cu reteaua neuronala decomentatie urmatoarele linii
-    # y_train = to_categorical(y_train)
-    # y_test = to_categorical(y_test)
-    # supervized_learning(X_train, y_train, X_test, y_test, 50, None, show_boxplot=True, show_evolution=True)
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
+    _, acc_NN = supervized_learning(X_train, y_train, X_test, y_test, 50, None, show_plot=True, return_accuracy=True)
+
+    utils.comparison_plots(acc_NN_RL, acc_RL_NN, acc_RL, acc_NN)
