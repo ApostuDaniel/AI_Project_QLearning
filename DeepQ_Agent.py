@@ -73,7 +73,7 @@ class Agent():
             action = np.random.choice(self.action_space)
         else:
             state = np.array([observation])
-            actions = self.q_eval.predict(state)
+            actions = self.q_eval.predict(state, verbose=0)
 
             action = np.argmax(actions)
 
@@ -86,8 +86,8 @@ class Agent():
         states, actions, rewards, states_, dones = \
             self.memory.sample_buffer(self.batch_size)
 
-        q_eval = self.q_eval.predict(states)
-        q_next = self.q_eval.predict(states_)
+        q_eval = self.q_eval.predict(states, verbose=0)
+        q_next = self.q_eval.predict(states_, verbose=0)
 
         q_target = np.copy(q_eval)
         batch_index = np.arange(self.batch_size, dtype=np.int32)
