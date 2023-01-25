@@ -16,7 +16,7 @@ from IrisGym import IrisGym
 
 
 def reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, network_weights=None):
-    env = IrisGym(dataset=(variables_train, target_train))
+    env = IrisGym(dataset=(variables_train, target_train), images_per_episode=len(variables_train))
     lr = 0.001
     n_games = episodes
     agent = Agent(gamma=0.01, epsilon=1.0, lr=lr,
@@ -25,7 +25,7 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
                   epsilon_end=0.01)
     if network_weights is not None:
         #to initialize the weights we need to call predict once
-        agent.q_eval.predict(np.asarray(variables_train[0]).reshape((1, len(variables_train[0]))))
+        agent.q_eval.predict(np.asarray(variables_train[0]).reshape((1, len(variables_train[0]))), verbose=0)
         agent.q_eval.set_weights(network_weights)
     scores = []
     eps_history = []
@@ -67,7 +67,7 @@ def supervized_learning(variables_train, target_train, variables_test, target_te
                   loss='mean_squared_error',
                   metrics=['accuracy'])
     if network_weights is not None:
-        model.predict(np.asarray(variables_train[0]).reshape((1, len(variables_train[0]))))
+        model.predict(np.asarray(variables_train[0]).reshape((1, len(variables_train[0]))), verbose=0)
         model.set_weights(network_weights)
     # build the model
     model.fit(variables_train, target_train, epochs=epochs, verbose=1)
@@ -105,11 +105,11 @@ if __name__ == '__main__':
     y = all_data[target].values
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
-    # supervized_to_RL(X_train, y_train, X_test, y_test, 50, 750)
-    RL_to_supervized(X_train, y_train, X_test, y_test, 50, 750)
+    # supervized_to_RL(X_train, y_train, X_test, y_test, 50, 10)
+    RL_to_supervized(X_train, y_train, X_test, y_test, 50, 10)
 
     # pentru reinforcement learning decomentati linia asta
-    # reinforcement_learning(X_train, y_train, X_test, y_test, 1500)
+    #reinforcement_learning(X_train, y_train, X_test, y_test, 30)
 
     # pentru learning cu reteaua neuronala decomentatie urmatoarele linii
     # y_train = to_categorical(y_train)
