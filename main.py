@@ -16,9 +16,9 @@ from IrisGym import IrisGym
 
 from matplotlib import pyplot as plt
 
-from matplotlib import pyplot as plt
 
-def reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, network_weights=None, show_plot=False, return_accuracy=False):
+def reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, network_weights=None,
+                           show_plot=False, return_accuracy=False):
     env = IrisGym(dataset=(variables_train, target_train), images_per_episode=len(variables_train))
     lr = 0.001
     n_games = episodes
@@ -27,7 +27,7 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
                   n_actions=3, mem_size=100000, batch_size=1,
                   epsilon_end=0.01)
     if network_weights is not None:
-        #to initialize the weights we need to call predict once
+        # to initialize the weights we need to call predict once
         agent.q_eval.predict(np.asarray(variables_train[0]).reshape((1, len(variables_train[0]))), verbose=0)
         agent.q_eval.set_weights(network_weights)
     scores = []
@@ -42,9 +42,8 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
             observation_, reward, done, _ = env.step(action)
             done = done
             score += reward
-            agent.store_transition(observation, action, reward, observation_, done)
+            agent.learn(observation, action, reward, observation_, done)
             observation = observation_
-            agent.learn()
 
         eps_history.append(agent.epsilon)
         scores.append(score)
@@ -63,12 +62,23 @@ def reinforcement_learning(variables_train, target_train, variables_test, target
         return agent.q_eval, [score / len(variables_train) for score in scores]
 
     return agent.q_eval, None
-    # filename = 'lunarlander_tf2.png'
-    # x = [i + 1 for i in range(n_games)]
-    # plotLearning(x, scores, eps_history, filename)
 
 
-def supervized_learning(variables_train, target_train, variables_test, target_test, epochs, network_weights=None, show_plot=False, return_accuracy=False):
+def test_RL(agent, variables_test, target_test):
+    env = IrisGym(dataset=(variables_test, target_test), images_per_episode=len(variables_test))
+    score = 0
+    observation = env.reset()
+    while not done:
+        action = agent.choose_action(observation)
+        observation_, reward, done, _ = env.step(action)
+        done = done
+        score += reward
+        observation = observation_
+    print('Accuracy on test data %.2f' % (score / len(variables_test)))
+
+
+def supervized_learning(variables_train, target_train, variables_test, target_test, epochs, network_weights=None,
+                        show_plot=False, return_accuracy=False):
     model = Sequential([
         Dense(50, activation='relu', input_dim=4),
         Dense(40, activation='relu'),
@@ -109,8 +119,10 @@ def supervized_to_RL(variables_train, target_train, variables_test, target_test,
     y_train = to_categorical(target_train)
     y_test = to_categorical(target_test)
     if show_plot:
-        trained_network, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs, return_accuracy=True)
-        rl_model, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, trained_network.get_weights(), return_accuracy=True)
+        trained_network, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs,
+                                                           return_accuracy=True)
+        rl_model, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test, target_test,
+                                                       episodes, trained_network.get_weights(), return_accuracy=True)
         accuracy = accuracy_nn + accuracy_rl
         plt.plot(accuracy)
         plt.legend(['accuracy'], loc='upper left')
@@ -119,7 +131,7 @@ def supervized_to_RL(variables_train, target_train, variables_test, target_test,
         return rl_model, accuracy
     trained_network = supervized_learning(variables_train, y_train, variables_test, y_test, epochs)
     rl_model = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes,
-                                        trained_network.get_weights())
+                                      trained_network.get_weights())
     return rl_model, None
 
 
@@ -127,8 +139,10 @@ def RL_to_supervized(variables_train, target_train, variables_test, target_test,
     y_train = to_categorical(target_train)
     y_test = to_categorical(target_test)
     if show_plot:
-        trained_network, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test, target_test, episodes, None, return_accuracy=True)
-        supervized_model, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs, trained_network.get_weights(), return_accuracy=True)
+        trained_network, accuracy_rl = reinforcement_learning(variables_train, target_train, variables_test,
+                                                              target_test, episodes, None, return_accuracy=True)
+        supervized_model, accuracy_nn = supervized_learning(variables_train, y_train, variables_test, y_test, epochs,
+                                                            trained_network.get_weights(), return_accuracy=True)
         accuracy = accuracy_rl + accuracy_nn
         plt.plot(accuracy)
         plt.legend(['accuracy'], loc='upper left')
